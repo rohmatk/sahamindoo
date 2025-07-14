@@ -3,6 +3,8 @@ import streamlit as st
 import plotly.express as px
 import glob
 import os
+import io
+
 
 # ✅ Konfigurasi halaman
 st.set_page_config(layout='wide', page_title="Dashboard Kepemilikan Saham")
@@ -57,6 +59,8 @@ df_summary = df_code.groupby('Bulan')[['Total Lokal', 'Total Asing', 'Total']].s
 st.subheader(f"📈 Tren Kepemilikan Saham - {selected_code}")
 st.line_chart(df_summary.set_index('Bulan'))
 
+
+
 # 🥧 Komposisi terakhir
 st.subheader("📊 Komposisi Lokal vs Asing di Bulan Terakhir")
 latest_month = df_summary['Bulan'].max()
@@ -66,6 +70,7 @@ if not latest_data.empty:
     df_pie = latest_data.melt(id_vars='Bulan', value_vars=['Total Lokal', 'Total Asing'])
     fig_pie = px.pie(df_pie, names='variable', values='value', title=f"Komposisi Kepemilikan ({latest_month})")
     st.plotly_chart(fig_pie, use_container_width=True)
+    
 
 # 📋 Tabel ringkasan
 st.subheader("📋 Data Ringkasan Bulanan")
@@ -116,58 +121,79 @@ st.dataframe(
     use_container_width=True
 )
 
+
 # 📊 Format Tabel Horizontal Gaya Excel PANI
-st.subheader("📊 Tabel Gaya Excel - Perubahan Tiap Bulan per Kategori Investor")
 
-# Salin dari df_trend
-df_excel = df_trend.copy()
-df_excel['Bulan Format'] = pd.to_datetime(df_excel['Bulan']).dt.strftime('%b')  # e.g. 'Apr'
-df_excel['Δ Saham'] = df_excel['Δ Saham'].astype('int64')
-df_excel['Jumlah Saham'] = df_excel['Jumlah Saham'].astype('int64')
-df_excel['Persentase'] = df_excel['Persentase'].round(2)
+# 📈 Grafik Tren Jumlah Saham per Bulan per Kategori + Tipe
+st.subheader("📈 Grafik Tren Bulanan: Kategori Investor per Tipe (Lokal/Asing)")
 
-# Format isi sel tabel gaya PANI
-df_excel['Label'] = (
-    df_excel['Δ Saham'].apply(lambda x: f"{x:+,}") + "\n" +
-    df_excel['Jumlah Saham'].apply(lambda x: f"{x:,}") + "\n" +
-    df_excel['Persentase'].astype(str) + "%"
+df_plot = pd.concat([df_local, df_foreign])
+df_plot['Kode'] = df_plot['Kategori'].str.extract(r'(ID|CP|MF|IB|IS|SC|PF|FD|OT)')
+df_plot['Kategori Lengkap'] = df_plot['Kode'].map(investor_mapping)
+
+# Gabungkan label tipe dan kategori
+df_plot['Label'] = df_plot['Tipe'] + ' - ' + df_plot['Kategori Lengkap']
+
+# Group dan format
+df_plot_grouped = df_plot.groupby(['Bulan', 'Label'])['Jumlah Saham'].sum().reset_index()
+df_plot_grouped = df_plot_grouped.sort_values(by='Bulan')
+
+# Gunakan plotly agar bisa hover dan interaktif
+fig_line = px.line(
+    df_plot_grouped,
+    x='Bulan',
+    y='Jumlah Saham',
+    color='Label',
+    title="Distribusi Jumlah Saham per Bulan per Kategori Investor (Lokal & Asing)",
+    markers=True
 )
+fig_line.update_layout(xaxis_title="Bulan", yaxis_title="Jumlah Saham", legend_title="Kategori Investor")
+st.plotly_chart(fig_line, use_container_width=True)
 
-# Pivot ke bentuk horizontal: baris = kategori, kolom = bulan
-pivot_excel = df_excel.pivot(index='Kategori Lengkap', columns='Bulan Format', values='Label')
-pivot_excel = pivot_excel.fillna("—")  # Kosongkan yang tidak tersedia
 
-# Fungsi highlight warna untuk Δ Saham
-def highlight_change(val):
-    if isinstance(val, str) and val != "—":
-        delta_line = val.split('\n')[0]
-        if delta_line.startswith('+'):
-            return 'color: green'
-        elif delta_line.startswith('-'):
-            return 'color: red'
-    return ''
+# 📊 Format Multi-Kolom Gaya Excel (Δ, Saham, % per Bulan)
+st.subheader("📊 Tabel Gaya Excel - Perubahan Tiap Bulan per Kategori Investor (Kolom Terpisah)")
 
-styled = pivot_excel.style.applymap(highlight_change)
-styled = styled.set_properties(**{'white-space': 'pre'})  # agar line-break tidak terpotong
+# Ambil data dasar dari df_trend
+df_pivoted = df_trend.copy()
+df_pivoted['Bulan Format'] = pd.to_datetime(df_pivoted['Bulan'], errors='coerce')
 
-# Tampilkan tabel dengan warna
-st.dataframe(styled, use_container_width=True)
+# Format nilai
+df_pivoted['Δ Saham'] = df_pivoted['Δ Saham'].astype(int)
+df_pivoted['Jumlah Saham'] = df_pivoted['Jumlah Saham'].astype(int)
+df_pivoted['Persentase'] = df_pivoted['Persentase'].map('{:.2f}%'.format)
 
-# 📥 Tombol Download ke Excel
-import io
-excel_buffer = io.BytesIO()
-pivot_excel.to_excel(excel_buffer, sheet_name="Rekap Gaya PANI", index=True)
-excel_buffer.seek(0)
+# Buat kolom gabungan
+df_pivoted = df_pivoted[['Kategori Lengkap', 'Bulan Format', 'Δ Saham', 'Jumlah Saham', 'Persentase']]
+df_pivoted_melt = df_pivoted.melt(id_vars=['Kategori Lengkap', 'Bulan Format'],
+                                  value_vars=['Δ Saham', 'Jumlah Saham', 'Persentase'],
+                                  var_name='Tipe', value_name='Nilai')
 
+# Gabungkan jadi kolom per bulan-tipe
+df_pivot_table = df_pivoted_melt.pivot_table(index='Kategori Lengkap',
+                                              columns=['Bulan Format', 'Tipe'],
+                                              values='Nilai',
+                                              aggfunc='first')
+
+
+# Sortir bulan agar rapih
+df_pivot_table = df_pivot_table.sort_index(axis=1, level=0, ascending=False)
+
+df_pivot_table.columns = pd.MultiIndex.from_tuples([
+    (col[0].strftime('%b'), col[1]) for col in df_pivot_table.columns
+])
+
+
+# Tampilkan
+st.dataframe(df_pivot_table, use_container_width=True)
+
+# --- Download ke Excel
+excel_buffer2 = io.BytesIO()
+df_pivot_table.to_excel(excel_buffer2, sheet_name="Pivot Multi-Kolom", index=True)
+excel_buffer2.seek(0)
 st.download_button(
-    label="📥 Download Format Tabel Excel PANI",
-    data=excel_buffer,
-    file_name=f"Rekap_GayaPANI_{selected_code}.xlsx",
+    label="📥 Download Tabel Multi-Kolom Excel",
+    data=excel_buffer2,
+    file_name=f"Rekap_MultiKolom_{selected_code}.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-
-
-# 📘 Penjelasan
-with st.expander("📘 Penjelasan Tipe Investor"):
-    for kode, desc in investor_mapping.items():
-        st.markdown(f"**{kode}** — {desc}")
