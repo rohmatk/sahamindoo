@@ -1,1 +1,6 @@
 streamlit
+streamlit
+yfinance
+pandas
+openpyxl
+pandas_market_calendars
