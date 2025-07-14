@@ -116,6 +116,57 @@ st.dataframe(
     use_container_width=True
 )
 
+# 📊 Format Tabel Horizontal Gaya Excel PANI
+st.subheader("📊 Tabel Gaya Excel - Perubahan Tiap Bulan per Kategori Investor")
+
+# Salin dari df_trend
+df_excel = df_trend.copy()
+df_excel['Bulan Format'] = pd.to_datetime(df_excel['Bulan']).dt.strftime('%b')  # e.g. 'Apr'
+df_excel['Δ Saham'] = df_excel['Δ Saham'].astype('int64')
+df_excel['Jumlah Saham'] = df_excel['Jumlah Saham'].astype('int64')
+df_excel['Persentase'] = df_excel['Persentase'].round(2)
+
+# Format isi sel tabel gaya PANI
+df_excel['Label'] = (
+    df_excel['Δ Saham'].apply(lambda x: f"{x:+,}") + "\n" +
+    df_excel['Jumlah Saham'].apply(lambda x: f"{x:,}") + "\n" +
+    df_excel['Persentase'].astype(str) + "%"
+)
+
+# Pivot ke bentuk horizontal: baris = kategori, kolom = bulan
+pivot_excel = df_excel.pivot(index='Kategori Lengkap', columns='Bulan Format', values='Label')
+pivot_excel = pivot_excel.fillna("—")  # Kosongkan yang tidak tersedia
+
+# Fungsi highlight warna untuk Δ Saham
+def highlight_change(val):
+    if isinstance(val, str) and val != "—":
+        delta_line = val.split('\n')[0]
+        if delta_line.startswith('+'):
+            return 'color: green'
+        elif delta_line.startswith('-'):
+            return 'color: red'
+    return ''
+
+styled = pivot_excel.style.applymap(highlight_change)
+styled = styled.set_properties(**{'white-space': 'pre'})  # agar line-break tidak terpotong
+
+# Tampilkan tabel dengan warna
+st.dataframe(styled, use_container_width=True)
+
+# 📥 Tombol Download ke Excel
+import io
+excel_buffer = io.BytesIO()
+pivot_excel.to_excel(excel_buffer, sheet_name="Rekap Gaya PANI", index=True)
+excel_buffer.seek(0)
+
+st.download_button(
+    label="📥 Download Format Tabel Excel PANI",
+    data=excel_buffer,
+    file_name=f"Rekap_GayaPANI_{selected_code}.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
+
 # 📘 Penjelasan
 with st.expander("📘 Penjelasan Tipe Investor"):
     for kode, desc in investor_mapping.items():
