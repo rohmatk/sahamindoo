@@ -4,6 +4,8 @@ import plotly.express as px
 import glob
 import os
 import io
+import plotly.express as px
+
 
 
 # ✅ Konfigurasi halaman

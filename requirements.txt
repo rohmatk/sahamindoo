@@ -4,3 +4,8 @@ yfinance
 pandas
 openpyxl
 pandas_market_calendars
+pandas
+streamlit
+plotly
+openpyxl
+numpy
