@@ -159,6 +159,8 @@ st.subheader("📊 Tabel Gaya Excel - Perubahan Tiap Bulan per Kategori Investor
 # Ambil data dasar dari df_trend
 df_pivoted = df_trend.copy()
 df_pivoted['Bulan Format'] = pd.to_datetime(df_pivoted['Bulan'], errors='coerce')
+df_pivoted['Bulan Format'] = pd.to_datetime(df_pivoted['Bulan Format']).dt.strftime('%b %Y')
+
 
 # Format nilai
 df_pivoted['Δ Saham'] = df_pivoted['Δ Saham'].astype(int)
@@ -181,9 +183,17 @@ df_pivot_table = df_pivoted_melt.pivot_table(index='Kategori Lengkap',
 # Sortir bulan agar rapih
 df_pivot_table = df_pivot_table.sort_index(axis=1, level=0, ascending=False)
 
-df_pivot_table.columns = pd.MultiIndex.from_tuples([
-    (col[0].strftime('%b'), col[1]) for col in df_pivot_table.columns
-])
+# ⛔ Jangan paksa strftime kalau bukan datetime
+bulan_urut = [
+    'Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024', 'Jun 2024',
+    'Jul 2024', 'Aug 2024', 'Sep 2024', 'Oct 2024', 'Nov 2024', 'Dec 2024',
+    'Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025'
+]
+
+
+# Pastikan kolom urut sesuai bulan
+df_pivot_table = df_pivot_table.sort_index(axis=1, level=0, key=lambda x: [bulan_urut.index(str(b)) if str(b) in bulan_urut else 99 for b in x])
+
 
 
 # Tampilkan
