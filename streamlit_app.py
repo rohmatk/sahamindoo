@@ -56,6 +56,36 @@ foreign_cols = ['Foreign IS','Foreign CP','Foreign PF','Foreign IB','Foreign ID'
 df_code['Total Lokal'] = df_code[local_cols].sum(axis=1)
 df_code['Total Asing'] = df_code[foreign_cols].sum(axis=1)
 
+# 📈 Buat ringkasan bulanan Lokal
+df_lokal_summary = df_code.groupby('Bulan')[local_cols].sum().reset_index()
+df_lokal_summary['Jenis'] = 'Lokal'
+
+# 📈 Buat ringkasan bulanan Asing
+df_asing_summary = df_code.groupby('Bulan')[foreign_cols].sum().reset_index()
+df_asing_summary['Jenis'] = 'Asing'
+
+# Standarkan nama kolom jadi 9 kategori investor
+df_lokal_summary.columns = ['Bulan'] + list(investor_mapping.values()) + ['Jenis']
+df_asing_summary.columns = ['Bulan'] + list(investor_mapping.values()) + ['Jenis']
+
+# Gabungkan dua jenis ringkasan
+df_perbandingan = pd.concat([df_lokal_summary, df_asing_summary], ignore_index=True)
+
+df_melt = df_perbandingan.melt(id_vars=['Bulan', 'Jenis'], 
+                               var_name='Kategori Lengkap', 
+                               value_name='Jumlah Saham')
+
+fig = px.bar(df_melt, 
+             x='Bulan', 
+             y='Jumlah Saham', 
+             color='Jenis', 
+             facet_col='Kategori Lengkap', 
+             facet_col_wrap=3, 
+             title="Perbandingan Kepemilikan per Bulan: Lokal vs Asing",
+             height=800)
+
+st.plotly_chart(fig, use_container_width=True)
+
 # 📈 Ringkasan bulanan
 df_summary = df_code.groupby('Bulan')[['Total Lokal', 'Total Asing', 'Total']].sum().reset_index()
 st.subheader(f"📈 Tren Kepemilikan Saham - {selected_code}")
