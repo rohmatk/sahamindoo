@@ -10,3 +10,6 @@ plotly
 openpyxl
 numpy
 datetime
+readability-lxml
+beautifulsoup4
+requests
