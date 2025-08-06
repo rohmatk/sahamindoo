@@ -17,3 +17,4 @@ def ambil_berita_dengan_alias(kode_saham, alias_dict):
     keyword_cari = f"{kode_saham} {nama_alias}".strip()
     berita = ambil_berita_google(keyword_cari)
     return keyword_cari, berita
+

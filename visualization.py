@@ -3,7 +3,7 @@ import plotly.express as px
 import io
 import pandas as pd
 
-
+ 
 def plot_bar_perbandingan(df_melt):
     fig = px.bar(df_melt, 
                  x='Bulan', 

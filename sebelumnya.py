@@ -11,8 +11,6 @@ from datetime import datetime, timedelta, timezone
 from dateutil import parser, tz
 
 
-
-
 # ✅ Konfigurasi halaman
 st.set_page_config(layout='wide', page_title="Dashboard Kepemilikan Saham")
 
