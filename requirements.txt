@@ -13,3 +13,7 @@ datetime
 readability-lxml
 beautifulsoup4
 requests
+feedparser
+trafilatura
+readability-lxml
+lxml

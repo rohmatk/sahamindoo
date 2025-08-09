@@ -2,6 +2,7 @@ import streamlit as st
 import plotly.express as px
 import io
 import pandas as pd
+import plotly.graph_objects as go
 
  
 def plot_bar_perbandingan(df_melt):
