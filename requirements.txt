@@ -1,5 +1,4 @@
 streamlit
-streamlit
 yfinance
 pandas
 openpyxl
@@ -15,5 +14,11 @@ beautifulsoup4
 requests
 feedparser
 trafilatura
-readability-lxml
 lxml
+sqlalchemy
+pymysql
+sqlalchemy
+pymysql
+feedparser
+tenacity
+python-dateutil

@@ -6,13 +6,48 @@ import os
 import io
 import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 from scraping import ambil_berita_google, ambil_isi_berita
 from datetime import datetime, timedelta, timezone
 from dateutil import parser, tz
 
+# --- Helper kecil untuk render AdSense ---
+def render_adsense(slot_id: str, height: int = 120):
+    components.html(
+        f"""
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7128151238109406"
+                crossorigin="anonymous"></script>
+
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-7128151238109406"
+             data-ad-slot="{slot_id}"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+
+        <script>
+            (adsbygoogle = window.adsbygoogle || []).push({{}});
+        </script>
+        """,
+        height=height,  # sesuaikan tinggi kontainer ad
+    )
 
 # ✅ Konfigurasi halaman
 st.set_page_config(layout='wide', page_title="Dashboard Kepemilikan Saham")
+
+# Setelah judul halaman
+st.title("📊 Dashboard Kepemilikan Saham Per Bulan")
+render_adsense(slot_id="XXXXXXXXXX", height=150)
+
+# Sisipkan lagi di bawah chart terakhir (in-content ad)
+st.subheader("📈 Grafik Tren Bulanan: Kategori Investor per Tipe (Lokal/Asing)")
+# (plotly line di sini)
+render_adsense(slot_id="YYYYYYYYYY", height=150)
+
+# Atau di sidebar (kadang CTR oke)
+with st.sidebar:
+    st.markdown("**Sponsor**")
+    render_adsense(slot_id="ZZZZZZZZZZ", height=250)
 
 st.title("📊 Dashboard Kepemilikan Saham Per Bulan")
 st.markdown("📅 Analisis distribusi investor lokal dan asing berdasarkan data bulanan dari file `.txt` KSEI")

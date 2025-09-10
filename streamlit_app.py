@@ -4,6 +4,8 @@ import plotly.express as px
 import streamlit as st
 from scraping import ambil_isi_berita, ambil_berita_google
 from berita_analysis import load_alias, ambil_berita_dengan_alias, get_source_labels
+from news_cache import load_cached, upsert_news
+
 
 from data_analysis import proses_data_ksei
 from scraping import ambil_isi_berita
@@ -158,3 +160,56 @@ else:
             teks = ambil_isi_berita(link)
             st.write(teks or ("> " + (it.get("summary") or "Ringkasan tidak tersedia.")))
         st.divider()
+
+# --- Sidebar: pilih saham & sumber ---
+kode_list = sorted(df["Code"].unique())
+selected_code = st.sidebar.selectbox("📌 Pilih Kode Saham", kode_list, key="sb_kode")
+
+label_to_url = get_source_labels()
+chosen_sources = st.sidebar.multiselect("Pilih RSS", list(label_to_url.keys()), default=list(label_to_url.keys()), key="sb_rss")
+extra_kw = st.sidebar.text_input("Tambah kata kunci (opsional, pisahkan koma)", "", key="sb_kw")
+extra_kw_list = [x.strip() for x in extra_kw.split(",") if x.strip()]
+max_age = st.sidebar.slider("Maks umur cache (jam)", 1, 48, 12, key="sb_cache_age")
+
+# --- Alias + cek cache ---
+saham_alias = load_alias()
+fresh, df_cache = load_cached(selected_code, max_age_hours=max_age)
+
+if not fresh:
+    # scrape baru
+    sources = [label_to_url[l] for l in chosen_sources]
+    keyword_cari, items = ambil_berita_dengan_alias(
+        selected_code, saham_alias, sources=sources, extra_keywords=extra_kw_list
+    )
+    # isi content (opsional) pakai readability bila ingin
+    filled = []
+    for it in items:
+        c = ambil_isi_berita(it["link"]) or ""
+        it["content"] = c
+        filled.append(it)
+    saved = save_articles(selected_code, keyword_cari, filled)
+    st.toast(f"✅ Cache diperbarui: {saved} artikel", icon="✅")
+
+# --- tampilkan dari DB ---
+df_news = query_cached(selected_code, limit=30)
+
+st.subheader(f"🗞️ Berita `{selected_code}`")
+if df_news.empty:
+    st.info("Belum ada berita untuk kode ini.")
+else:
+    for _, row in df_news.iterrows():
+        title = row["judul"]
+        link  = row["link"]
+        src   = row.get("source") or ""
+        ts    = row.get("pub_date")
+        st.markdown(f"### [{title}]({link})")
+        st.caption(f"🕒 {ts} · {src}")
+        with st.expander("Lihat isi"):
+            body = row["content"] or row["summary"] or "❌ Konten tidak tersedia."
+            st.markdown(body)
+
+if st.button("🔄 Refresh berita sekarang", use_container_width=True):
+    fresh = False  # paksa refresh pada blok di atas
+
+keyword_cari, berita = ambil_berita_dengan_alias(selected_code, saham_alias, ...)
+upsert_news(selected_code, berita)
