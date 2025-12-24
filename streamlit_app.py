@@ -3,16 +3,16 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from scraping import ambil_isi_berita, ambil_berita_google
-from berita_analysis import load_alias, ambil_berita_dengan_alias, get_source_labels
-from news_cache import load_cached, upsert_news
+from berita_analysis import load_alias, ambil_berita_dengan_alias, get_source_labels # type: ignore
+from news_cache import load_cached, upsert_news # type: ignore
 
 
 from data_analysis import proses_data_ksei
 from scraping import ambil_isi_berita
 from visualization import (
-    plot_line_trend_summary,
-    tampilkan_pie_terakhir,
-    plot_bar_per_kategori_terakhir,
+    plot_line_trend_summary, # type: ignore
+    tampilkan_pie_terakhir, # type: ignore
+    plot_bar_per_kategori_terakhir, # type: ignore
     plot_line_per_kategori,
     tampilkan_tabel_trend_kategori,
     tampilkan_pivot_excel
